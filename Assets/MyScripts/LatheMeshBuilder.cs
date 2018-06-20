@@ -6,52 +6,76 @@ public class LatheMeshBuilder
     private readonly MeshBuilder meshBuilder;
     private readonly int numSplines;
 
+    private int numExistingSegments;
     private Matrix4x4 previousRotated;
 
     public LatheMeshBuilder(int numSplines)
     {
         this.numSplines = numSplines;
-        
+
         meshBuilder = new MeshBuilder();
         previousRotated = Matrix4x4.identity;
     }
 
-    public Mesh CreateMesh() => meshBuilder.CreateMesh();
+    public Mesh CreateMesh() => meshBuilder.CreateMesh(shouldRecalculateNormals: false);
     public void Reset()      => meshBuilder.Reset();
     
     //this method updates the mesh if needed
     public void Add(IList<Vector2> sideVertices, Vector3 rotationPerUnitHeightEuler = new Vector3())
-    {        
-        int offset = meshBuilder.vertexCount;
-
+    {
         Matrix4x4 segmentLocalToModelspace = Matrix4x4.identity;
         
         //go through all vertices (all vertices per spline)
-        for (int vertexIndex = 0; vertexIndex < sideVertices.Count; ++vertexIndex)
+        for (int segmentIndex = 0; segmentIndex < sideVertices.Count; ++segmentIndex)
         {
-            Vector3 sideVertex = sideVertices[vertexIndex];
-
-            segmentLocalToModelspace = GetTransformSegmentLocalToModel(sideVertex.y, rotationPerUnitHeightEuler);
+            Vector2 sideVertex = sideVertices[segmentIndex];
+            
+            segmentLocalToModelspace = previousRotated * GetTransformSegmentLocalToModel(sideVertex.y, rotationPerUnitHeightEuler);
             
             //go through all splines (vertical lines around mesh)
-            for (int splineIndex = 0; splineIndex < numSplines; ++splineIndex)
+            for (int splineIndex = 0; splineIndex <= numSplines; ++splineIndex)
             {
-                var vertexRotationAroundCenter = Quaternion.Euler(0, splineIndex * 360f / numSplines, 0);
+                float rotationProgress = splineIndex / (float)numSplines;
+                var vertexRotationAroundCenter = Quaternion.Euler(0, -360f * rotationProgress, 0);
                 var transformRotateVertexAroundCenter = Matrix4x4.Rotate(vertexRotationAroundCenter);
-                var vertex = (previousRotated * segmentLocalToModelspace * transformRotateVertexAroundCenter).MultiplyPoint(sideVertex);
 
+                Vector3 rotatedVertex = transformRotateVertexAroundCenter.MultiplyPoint(sideVertex);
+                                
+                Vector3 vertex = segmentLocalToModelspace.MultiplyPoint(rotatedVertex);
+                Vector3 uv = new Vector2(rotationProgress, rotatedVertex.y);
+
+                Vector3 normal;
+                if (segmentIndex - 1 <= 0)
+                {
+                    normal = Vector2.Perpendicular(sideVertex - sideVertices[segmentIndex + 1]);
+                }
+                else if (segmentIndex + 1 >= sideVertices.Count)
+                {
+                    normal = Vector2.Perpendicular(sideVertices[segmentIndex - 1] - sideVertex);
+                }
+                else
+                {
+                    normal = 0.5f * (
+                        Vector2.Perpendicular(sideVertex - sideVertices[segmentIndex + 1]) +
+                        Vector2.Perpendicular(sideVertices[segmentIndex - 1] - sideVertex)
+                    );
+                }
+                
+                normal = (segmentLocalToModelspace * transformRotateVertexAroundCenter).MultiplyVector(normal); 
+                
                 //add it to the mesh
-                meshBuilder.AddVertex(vertex);
+                meshBuilder.AddVertex(vertex, uv, normal);
             }
         }
-
-        previousRotated = segmentLocalToModelspace;
-        
-        //start at 1, because we need to access vertex at vertexIndex-1
-        for (int vertexIndex = 1; vertexIndex < sideVertices.Count; ++vertexIndex)
-        {                
-            AddTrianglesRing(vertexIndex, offset);
+                
+        if (numExistingSegments > 0) AddTrianglesRing(numExistingSegments - 1);
+        for (int vertexIndex = numExistingSegments; vertexIndex <= numExistingSegments + sideVertices.Count - 2; ++vertexIndex)
+        {
+            AddTrianglesRing(vertexIndex);
         }
+        
+        previousRotated = segmentLocalToModelspace;
+        numExistingSegments += sideVertices.Count;
     }
 
     private Matrix4x4 GetTransformSegmentLocalToModel(float segmentY, Vector3 rotationPerUnitHeightEuler)
@@ -70,27 +94,20 @@ public class LatheMeshBuilder
 
     private void AddTrianglesRing(int vertexIndex, int offset = 0)
     {
-        for (int splineIndex = 1; splineIndex < numSplines; ++splineIndex)
+        for (int splineIndex = 0; splineIndex < numSplines; ++splineIndex)
         {
             meshBuilder.AddQuad(
-                GetIndex(splineIndex - 1, vertexIndex - 1, offset),
-                GetIndex(splineIndex    , vertexIndex - 1, offset),
-                GetIndex(splineIndex - 1, vertexIndex    , offset),
-                GetIndex(splineIndex    , vertexIndex    , offset)
+                GetIndex(splineIndex    , vertexIndex    , offset),
+                GetIndex(splineIndex    , vertexIndex + 1, offset),
+                GetIndex(splineIndex + 1, vertexIndex    , offset),
+                GetIndex(splineIndex + 1, vertexIndex + 1, offset)
             );
         }
-            
-        meshBuilder.AddQuad(
-            GetIndex(numSplines - 1, vertexIndex - 1, offset),
-            GetIndex(0             , vertexIndex - 1, offset),
-            GetIndex(numSplines - 1, vertexIndex    , offset),
-            GetIndex(0             , vertexIndex    , offset)
-        );
     }
     
     //helper function to map the x,y location of a vertex to an index in a 1D array
     private int GetIndex(int splineIndex, int vertexIndex, int offset = 0)
     {
-        return offset + splineIndex + vertexIndex * numSplines;
+        return offset + splineIndex + vertexIndex * (numSplines + 1);
     }
 }

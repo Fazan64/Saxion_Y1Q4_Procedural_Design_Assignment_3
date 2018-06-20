@@ -53,12 +53,12 @@ namespace Handout {
 
 					switch (patternType) {
 					case PatternType.Noise:
-						// TODO: Use a better noise type here (Perlin?)
-						float lightness = Random.value;
+						// TODO Make tileable perlin noise. Maybe sample along two perpendicular circles in 4D
+						float lightness = Mathf.PerlinNoise((u - 0.5f) * HorizontalMultiplier, (v - 0.5f) * VerticalMultiplier);
 						// black / white:
 						//cols [index] = lightness * Color.white;
 						// linear interpolation between two given colors:
-						cols [index] = lightness * color1 + (1-lightness) * color2;
+						cols[index] = lightness * color1 + (1-lightness) * color2;
 						break;
 					case PatternType.Gradient:
 						// from black to white:

@@ -380,25 +380,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e030bc47afba4a7998e14a38d94eaace, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  numSplines: 30
   stemHeight: 1
   numStemSegments: 10
   stemRadius: 0.2
+  rotationPerHeightUnitEuler: {x: 5, y: 0, z: 0}
   capHeight: 0.2
   capRadius: 0.4
-  numCapSegments: 5
-  numSplines: 10
+  numCapSegments: 10
+  capShape: 0
+  drawNormals: 0
 --- !u!114 &537090897
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 537090895}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0741852e510419d4b91c9ef271c7abcf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  patternType: 1
+  patternType: 0
   HorizontalMultiplier: 8
   VerticalMultiplier: 8
   HorizontalOffset: 0
@@ -1510,7 +1513,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1773333105
 MonoBehaviour:
   m_ObjectHideFlags: 0

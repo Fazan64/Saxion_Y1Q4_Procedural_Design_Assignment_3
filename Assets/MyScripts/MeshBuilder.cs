@@ -9,6 +9,7 @@ public class MeshBuilder
 {
     private readonly List<Vector3> vertices;
     private readonly List<Vector2> uvs;
+    private readonly List<Vector3> normals;
     private readonly List<int> triangles;
 
     public bool isDoubleSided { get; set; }
@@ -32,6 +33,7 @@ public class MeshBuilder
     {
         vertices  = new List<Vector3>();
         uvs       = new List<Vector2>();
+        normals   = new List<Vector3>();
         triangles = new List<int>();
         
         textureSizeInUnits = Vector2.one;
@@ -41,6 +43,7 @@ public class MeshBuilder
     {
         vertices  = new List<Vector3>(capacity: estimateNumVertices);
         uvs       = new List<Vector2>(capacity: estimateNumVertices);
+        normals   = new List<Vector3>(capacity: estimateNumVertices);
         triangles = new List<int>(capacity: estimateNumVertices * 3);
         
         textureSizeInUnits = Vector2.one;
@@ -53,6 +56,7 @@ public class MeshBuilder
     {
         vertices.Clear();
         uvs.Clear();
+        normals.Clear();
         triangles.Clear();
 
         isDoubleSided = false;
@@ -68,7 +72,7 @@ public class MeshBuilder
     /// Adds a vertex to the list, based on a Vector3f position and an optional Vector2f uv set
     /// </summary>
     /// <returns>The vertex index.</returns>
-    public int AddVertex(Vector3 position, Vector2 uv = new Vector2())
+    public int AddVertex(Vector3 position, Vector2 uv = new Vector2(), Vector3 normal = new Vector3())
     {
         int newVertexIndex = vertices.Count;
 
@@ -76,13 +80,15 @@ public class MeshBuilder
 
         uv.y = uvRangeY.Lerp(uv.y);
         uvs.Add(uv);
+        
+        normals.Add(normal);
 
         return newVertexIndex;
     }
 
     public int Clone(int vertexIndex)
     {
-        return AddVertex(vertices[vertexIndex], uvs[vertexIndex]);
+        return AddVertex(vertices[vertexIndex], uvs[vertexIndex], normals[vertexIndex]);
     }
 
     /// <summary>
@@ -106,20 +112,26 @@ public class MeshBuilder
     public Mesh CreateMesh(bool shouldRecalculateNormals = true)
     {
         var mesh = new Mesh();
-        ApplyToMesh(mesh);
+        ApplyToMesh(mesh, shouldRecalculateNormals);
         return mesh;
     }
 
-    public Mesh ApplyToMesh(Mesh mesh, bool shouldRecalculateNormals = true)
+    public void ApplyToMesh(Mesh mesh, bool shouldRecalculateNormals = true)
     {        
         mesh.SetVertices(vertices);
         mesh.SetUVs(0, uvs);
         mesh.SetTriangles(triangles, submesh: 0);
-        
-        if (shouldRecalculateNormals) mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
 
-        return mesh;
+        if (shouldRecalculateNormals)
+        {
+            mesh.RecalculateNormals();
+        }
+        else
+        {
+            mesh.SetNormals(normals);
+        }
+        
+        mesh.RecalculateBounds();
     }
 
     #region Helpers
@@ -160,13 +172,13 @@ public class MeshBuilder
     }
 
 
-    //  (10)    (11)
-    //  2-------3 
-    //  |       |    y
-    //  |       |    |
-    //  |       |    |
-    //  0-------1    +--x 
-    //  (00)    (01)
+    //  (01)    (11)
+    //  1-------3
+    //  |       |     y
+    //  |       |     |
+    //  |       |     |
+    //  0-------2     +--x 
+    //  (00)    (10)  (xy)
     public void AddQuad(int v00, int v01, int v10, int v11)
     {
         if (automaticUvRange.HasValue)
@@ -176,14 +188,14 @@ public class MeshBuilder
         
         AddTriangle(
             v00,
-            v11,
+            v01,
             v10
         );
 
         AddTriangle(
-            v00,
             v01,
-            v11
+            v11,
+            v10
         );
     }
     
@@ -233,20 +245,20 @@ public class MeshBuilder
     //     | |     | |       y
     //     | 1-----+-5       | z
     //     |/(001) |/(101)   |/
-    //     0-------4         +--x 
-    //     (000)   (100)
+    //     0-------4         +--x
+    //     (000)   (100)     (xyz)
     /// Vertex order taken from here: http://poita.org/2014/04/27/cube-vertex-numbering.html
     public void AddCuboid(params Vector3[] vertexPositions)
     {
         Assert.AreEqual(8, vertexPositions.Length, "AddCuboid takes 8 vertices.");
 
         var pos = vertexPositions;
-        AddQuad(pos[0], pos[4], pos[2], pos[6]);
-        AddQuad(pos[1], pos[0], pos[3], pos[2]);
-        AddQuad(pos[4], pos[5], pos[6], pos[7]);
-        AddQuad(pos[1], pos[5], pos[7], pos[3]);
-        AddQuad(pos[2], pos[6], pos[3], pos[7]);
-        AddQuad(pos[1], pos[5], pos[0], pos[4]);
+        AddQuad(pos[0], pos[2], pos[4], pos[6]);
+        AddQuad(pos[1], pos[3], pos[0], pos[2]);
+        AddQuad(pos[4], pos[6], pos[5], pos[7]);
+        AddQuad(pos[1], pos[7], pos[5], pos[3]);
+        AddQuad(pos[2], pos[3], pos[6], pos[7]);
+        AddQuad(pos[1], pos[0], pos[5], pos[4]);
     }
 
     #endregion
