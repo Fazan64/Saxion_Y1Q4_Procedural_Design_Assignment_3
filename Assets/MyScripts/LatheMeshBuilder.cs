@@ -78,7 +78,7 @@ public class LatheMeshBuilder
         numExistingSegments += sideVertices.Count;
     }
 
-    private Matrix4x4 GetTransformSegmentLocalToModel(float segmentY, Vector3 rotationPerUnitHeightEuler)
+    private static Matrix4x4 GetTransformSegmentLocalToModel(float segmentY, Vector3 rotationPerUnitHeightEuler)
     {
         Vector3 segmentLocalCenter = Vector3.up * segmentY;
             
