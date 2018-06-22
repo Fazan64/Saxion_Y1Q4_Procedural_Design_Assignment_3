@@ -3,11 +3,14 @@ using System.ComponentModel;
 using System.Linq;
 using UnityEngine;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshCollider))]
+[RequireComponent(typeof(Renderer))]
 public class ProceduralMushroom : MonoBehaviour
 {
     [SerializeField] [Range(3, 30)] private int numSplines = 10;
@@ -26,23 +29,38 @@ public class ProceduralMushroom : MonoBehaviour
     [SerializeField] [Range(0f, 1f)] float capShape;
 
     [Header("Texture")] 
-    [SerializeField] private Color color;
+    [SerializeField] MushroomTextureGenerator textureGenerator = new MushroomTextureGenerator();
 
     [Header("Debug")] 
     [SerializeField] private bool drawNormals;
-        
+
+    private new Renderer renderer;
+    private MeshFilter meshFilter;
+    private MeshCollider meshCollider;
+    
     private bool isDirty = true;
+
+    private CancellationTokenSource cancellationTokenSource;
+
+    void Start()
+    {
+        renderer = GetComponent<Renderer>();
+        meshFilter = GetComponent<MeshFilter>();
+        meshCollider = GetComponent<MeshCollider>();
+    }
 
     void OnValidate()
     {
         isDirty = true;
+        //Debug.Log("Cancelling " + cancellationTokenSource);
+        cancellationTokenSource?.Cancel();
     }
 
     void Update()
     {
         if (isDirty)
         {
-            UpdateMesh();
+            UpdateMeshAndTexture();
             isDirty = false;
         }
 
@@ -51,17 +69,50 @@ public class ProceduralMushroom : MonoBehaviour
             DrawNormals();
         }
     }
-    
-    public void UpdateMesh()
+
+    private void OnDestroy()
     {
-        var lathe = new LatheMeshBuilder(numSplines);
+        cancellationTokenSource?.Cancel();
+    }
 
-        AddStem(lathe);
-        AddCap(lathe);
+    private async void UpdateMeshAndTexture()
+    {
+        cancellationTokenSource = new CancellationTokenSource();
+        
+        try
+        {
+            var lathe = new LatheMeshBuilder(numSplines);
 
-        Mesh mesh = lathe.CreateMesh();
-        GetComponent<MeshFilter>().sharedMesh = mesh;
-        GetComponent<MeshCollider>().sharedMesh = mesh;
+            Task meshTask = Task.Run(() =>
+            {
+                AddStem(lathe);
+                AddCap(lathe);
+            }, cancellationTokenSource.Token);
+            Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(cancellationTokenSource.Token);
+
+            await Task.WhenAll(meshTask, textureTask);
+            
+            cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            if (renderer)
+            {
+                renderer.material.mainTexture = await textureTask;
+            }
+
+            if (meshFilter && meshCollider)
+            {
+                await meshTask;
+                Mesh mesh = lathe.CreateMesh();
+                meshFilter.sharedMesh = mesh;
+                meshCollider.sharedMesh = mesh;
+            }
+        }
+        catch (OperationCanceledException ex)
+        {
+           //Debug.Log(ex);
+        }
+
+        cancellationTokenSource = null;
     }
 
     public void Randomize()

@@ -15,7 +15,7 @@ public class MushroomField : MonoBehaviour
 
     private RandomSpawner spawner;
     private readonly List<ProceduralMushroom> mushrooms = new List<ProceduralMushroom>();
-    
+        
     void Start()
     {
         spawner = GetComponent<RandomSpawner>();
