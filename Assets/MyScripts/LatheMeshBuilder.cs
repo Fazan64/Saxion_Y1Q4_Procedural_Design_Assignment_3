@@ -61,7 +61,8 @@ public class LatheMeshBuilder
                     );
                 }
                 
-                normal = (segmentLocalToModelspace * transformRotateVertexAroundCenter).MultiplyVector(normal); 
+                normal = (segmentLocalToModelspace * transformRotateVertexAroundCenter).MultiplyVector(normal);
+                normal.Normalize();
                 
                 //add it to the mesh
                 meshBuilder.AddVertex(vertex, uv, normal);

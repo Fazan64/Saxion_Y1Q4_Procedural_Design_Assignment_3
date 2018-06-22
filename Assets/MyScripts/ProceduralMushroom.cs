@@ -82,12 +82,8 @@ public class ProceduralMushroom : MonoBehaviour
         try
         {
             var lathe = new LatheMeshBuilder(numSplines);
-
-            Task meshTask = Task.Run(() =>
-            {
-                AddStem(lathe);
-                AddCap(lathe);
-            }, cancellationTokenSource.Token);
+            
+            Task meshTask = Task.Run(() => BuildMushroomModel(lathe), cancellationTokenSource.Token);
             Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(cancellationTokenSource.Token);
 
             await Task.WhenAll(meshTask, textureTask);
@@ -120,6 +116,12 @@ public class ProceduralMushroom : MonoBehaviour
         rotationPerHeightUnitEuler = Random.onUnitSphere * Random.Range(0f, 30f);
 
         isDirty = true;
+    }
+
+    private void BuildMushroomModel(LatheMeshBuilder lathe)
+    {
+        AddStem(lathe);
+        AddCap(lathe);
     }
 
     private void AddStem(LatheMeshBuilder lathe)
@@ -167,7 +169,7 @@ public class ProceduralMushroom : MonoBehaviour
         Vector3[] normals = mesh.normals;
         for (int i = 0; i < vertices.Length; ++i)
         {
-            Debug.DrawRay(transform.position + vertices[i], normals[i]);
+            Debug.DrawRay(transform.position + vertices[i], normals[i], Color.black);
         }
     }
 
@@ -184,31 +186,6 @@ public class ProceduralMushroom : MonoBehaviour
             rotationPerHeightUnitEuler.y,
             rotationPerHeightUnitEuler.z
         };
-        
-        /*
-        using (var stream = new MemoryStream())
-        {
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write(stemHeight);
-                writer.Write(stemRadius);
-                writer.Write(capHeight);
-                writer.Write(capOverhang);
-                writer.Write(capShape);
-
-                writer.Write(rotationPerHeightUnitEuler.x);
-                writer.Write(rotationPerHeightUnitEuler.y);
-                writer.Write(rotationPerHeightUnitEuler.z);
-            }
-
-            using (var reader = new BinaryReader(stream))
-            {
-                return Enumerable
-                    .Range(0, (int)stream.Length * sizeof(byte) / sizeof(float))
-                    .Select(i => reader.ReadSingle())
-                    .ToArray();
-            }
-        }*/
     }
 
     public void SetGenes(float[] genes)
@@ -223,24 +200,5 @@ public class ProceduralMushroom : MonoBehaviour
         rotationPerHeightUnitEuler.x = genes[5];
         rotationPerHeightUnitEuler.y = genes[6];
         rotationPerHeightUnitEuler.z = genes[7];
-        
-        /*using (var stream = new MemoryStream(genes))
-        using (var reader = new BinaryReader(stream))
-        {
-            stemHeight = reader.ReadSingle();
-            stemRadius = reader.ReadSingle();
-            capHeight  = reader.ReadSingle();
-            capRadius  = reader.ReadSingle();
-            capShape   = reader.ReadSingle();
-            
-            rotationPerHeightUnitEuler = new Vector3(
-                reader.ReadSingle(),
-                reader.ReadSingle(),
-                reader.ReadSingle()
-            );
-        }*/
     }
-    
-    // NOTES
-    // IGenetic<float>
 }
