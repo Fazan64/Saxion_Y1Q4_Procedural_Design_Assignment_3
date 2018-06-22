@@ -94,18 +94,11 @@ public class ProceduralMushroom : MonoBehaviour
             
             cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-            if (renderer)
-            {
-                renderer.material.mainTexture = await textureTask;
-            }
+            renderer.material.mainTexture = await textureTask;
 
-            if (meshFilter && meshCollider)
-            {
-                await meshTask;
-                Mesh mesh = lathe.CreateMesh();
-                meshFilter.sharedMesh = mesh;
-                meshCollider.sharedMesh = mesh;
-            }
+            Mesh mesh = lathe.CreateMesh();
+            meshFilter.sharedMesh   = mesh;
+            meshCollider.sharedMesh = mesh;
         }
         catch (OperationCanceledException ex)
         {
