@@ -545,6 +545,10 @@ Prefab:
       propertyPath: m_RootOrder
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2000000, guid: 5e9e851c0e142814dac026a256ba2ac0, type: 2}
+      propertyPath: m_HDR
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 5e9e851c0e142814dac026a256ba2ac0, type: 2}
   m_IsPrefabParent: 0
@@ -766,8 +770,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c82ca5da017c476197e4316c8aee857e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mutationRate: 0.05
+  mutationRate: 0.1
   spawnInterval: 0.05
+  automaticSelection: 0
 --- !u!114 &1896458205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -782,9 +787,12 @@ MonoBehaviour:
   prefab: {fileID: 1450213577249050, guid: 78b69d1458c1642268c7d094105334bb, type: 2}
   numToSpawn: 30
   maxHeight: 100
-  range: 24
+  range: 40
   cellSize: 4
   offset: {x: 0, y: 0, z: 0}
+  terrainCheckLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967035
 --- !u!4 &1896458206
 Transform:
   m_ObjectHideFlags: 0

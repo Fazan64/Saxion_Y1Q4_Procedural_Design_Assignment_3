@@ -525,20 +525,21 @@ public class SimplexNoise
         return noiseSum / (float)totalIterations;
     }
 
-    //X, Y is [0..1]
-    public static float SeamlessNoise(float x, float y, float dx, float dy, float xyOffset)
+    // u, v are in [0..1]
+    public static float SeamlessNoise(float u, float v, float du, float dv, float uOffset, float vOffset)
     {
         const float TwoPi = 2f * Mathf.PI;
         const float InvTwoPi = 1f / TwoPi;
         
-        float s = x;
-        float t = y;
+        float s = u;
+        float t = v;
 
-        float nx = xyOffset + Mathf.Cos(s * TwoPi) * dx * InvTwoPi;
-        float ny = xyOffset + Mathf.Cos(t * TwoPi) * dy * InvTwoPi;
-        float nz = xyOffset + Mathf.Sin(s * TwoPi) * dx * InvTwoPi;
-        float nw = xyOffset + Mathf.Sin(t * TwoPi) * dy * InvTwoPi;
+        float x = uOffset + Mathf.Cos(s * TwoPi) * du * InvTwoPi;
+        float y = uOffset + Mathf.Sin(s * TwoPi) * du * InvTwoPi;
+        
+        float z = vOffset + Mathf.Cos(t * TwoPi) * dv * InvTwoPi;
+        float w = vOffset + Mathf.Sin(t * TwoPi) * dv * InvTwoPi;
 
-        return Noise(nx, ny, nz, nw);
+        return Noise(x, y, z, w);
     }
 }

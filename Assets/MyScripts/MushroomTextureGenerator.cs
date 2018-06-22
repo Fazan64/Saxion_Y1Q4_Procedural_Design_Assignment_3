@@ -11,7 +11,7 @@ public class MushroomTextureGenerator
     public Color colorB = Color.black;
 
     public Vector2Int resolution = new Vector2Int(512, 512);
-    public Vector2 scale  = Vector2.one;
+    public Vector2 scale  = new Vector2(32f, 32f);
     public Vector2 offset = Vector2.zero;
     
     public Texture2D GenerateTexture()
@@ -63,7 +63,7 @@ public class MushroomTextureGenerator
                 float u = x * invWidth;
                 float v = y * invHeight;
                 int index = x + y * resolution.x;
-                float t = SimplexNoise.SeamlessNoise(u, v, scale.x, scale.y, offset.x + offset.y);
+                float t = SimplexNoise.SeamlessNoise(u, v, scale.x, scale.y, offset.x, offset.y);
                 
                 colors[index] = Color.Lerp(colorA, colorB, t);
             }

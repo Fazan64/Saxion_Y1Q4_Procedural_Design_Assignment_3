@@ -23,7 +23,7 @@ GameObject:
   - component: {fileID: 64155050366571336}
   - component: {fileID: 23954921380541444}
   - component: {fileID: 114993199820447998}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Mushroom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -112,12 +112,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   numSplines: 30
   stemHeight: 2
-  numStemSegments: 7
+  numStemSegments: 20
   stemRadius: 0.2
   rotationPerHeightUnitEuler: {x: 5, y: 100, z: 0}
   capHeight: 1
   capOverhang: 0.05
-  numCapSegments: 10
+  numCapSegments: 20
   capShape: 1
   textureGenerator:
     colorA: {r: 1, g: 1, b: 1, a: 1}

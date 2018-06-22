@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Linq;
 using UnityEngine;
 using System.IO;
@@ -39,11 +38,15 @@ public class ProceduralMushroom : MonoBehaviour
     private MeshCollider meshCollider;
     
     private bool isDirty = true;
+    private bool wasChangedInInspector;
+    private bool didStart;
 
     private CancellationTokenSource cancellationTokenSource;
 
     void Start()
     {
+        didStart = true;
+        
         renderer = GetComponent<Renderer>();
         meshFilter = GetComponent<MeshFilter>();
         meshCollider = GetComponent<MeshCollider>();
@@ -52,6 +55,8 @@ public class ProceduralMushroom : MonoBehaviour
     void OnValidate()
     {
         isDirty = true;
+        wasChangedInInspector = didStart;
+
         //Debug.Log("Cancelling " + cancellationTokenSource);
         cancellationTokenSource?.Cancel();
     }
@@ -60,8 +65,17 @@ public class ProceduralMushroom : MonoBehaviour
     {
         if (isDirty)
         {
-            UpdateMeshAndTexture();
+            if (wasChangedInInspector)
+            {
+                UpdateMeshAndTexture();
+            }
+            else
+            {
+                UpdateMeshAndTextureAsync();
+            }
+
             isDirty = false;
+            wasChangedInInspector = false;
         }
 
         if (drawNormals)
@@ -70,40 +84,11 @@ public class ProceduralMushroom : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
+    void OnDestroy()
     {
         cancellationTokenSource?.Cancel();
     }
-
-    private async void UpdateMeshAndTexture()
-    {
-        cancellationTokenSource = new CancellationTokenSource();
-        
-        try
-        {
-            var lathe = new LatheMeshBuilder(numSplines);
-            
-            Task meshTask = Task.Run(() => BuildMushroomModel(lathe), cancellationTokenSource.Token);
-            Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(cancellationTokenSource.Token);
-
-            await Task.WhenAll(meshTask, textureTask);
-            
-            cancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-            renderer.material.mainTexture = await textureTask;
-
-            Mesh mesh = lathe.CreateMesh();
-            meshFilter.sharedMesh   = mesh;
-            meshCollider.sharedMesh = mesh;
-        }
-        catch (OperationCanceledException ex)
-        {
-           //Debug.Log(ex);
-        }
-
-        cancellationTokenSource = null;
-    }
-
+    
     public void Randomize()
     {
         stemHeight = Random.Range(0.1f, 5f);
@@ -115,7 +100,61 @@ public class ProceduralMushroom : MonoBehaviour
         
         rotationPerHeightUnitEuler = Random.onUnitSphere * Random.Range(0f, 30f);
 
+        textureGenerator.colorA = RandomColor();
+        textureGenerator.colorB = RandomColor();
+        textureGenerator.scale  = new Vector2(Random.Range(2f, 32f), Random.Range(2f, 32f));
+        textureGenerator.offset = new Vector2(Random.Range(-100f, 100f), Random.Range(-100f, 100f));
+
         isDirty = true;
+    }
+
+    private static Color RandomColor()
+    {
+        return Random.ColorHSV(
+            hueMin:        0f  , hueMax:        1f,
+            saturationMin: 0.5f, saturationMax: 1f,
+            valueMin:      0.8f, valueMax:      1f
+        );
+    }
+
+    private void UpdateMeshAndTexture()
+    {
+        var lathe = new LatheMeshBuilder(numSplines);
+        BuildMushroomModel(lathe);
+        Mesh mesh = lathe.CreateMesh();
+        meshFilter.sharedMesh = mesh;
+        meshCollider.sharedMesh = mesh;
+
+        renderer.material.mainTexture = textureGenerator.GenerateTexture();
+    }
+
+    private async void UpdateMeshAndTextureAsync()
+    {
+        cancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            var lathe = new LatheMeshBuilder(numSplines);
+
+            Task meshTask = Task.Run(() => BuildMushroomModel(lathe), cancellationTokenSource.Token);
+            Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(cancellationTokenSource.Token);
+
+            await Task.WhenAll(meshTask, textureTask);
+
+            cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            
+            Mesh mesh = lathe.CreateMesh();
+            meshFilter.sharedMesh = mesh;
+            meshCollider.sharedMesh = mesh;
+
+            renderer.material.mainTexture = await textureTask;
+        }
+        catch (OperationCanceledException ex)
+        {
+            //Debug.Log(ex);
+        }
+
+        cancellationTokenSource = null;
     }
 
     private void BuildMushroomModel(LatheMeshBuilder lathe)
@@ -169,7 +208,7 @@ public class ProceduralMushroom : MonoBehaviour
         Vector3[] normals = mesh.normals;
         for (int i = 0; i < vertices.Length; ++i)
         {
-            Debug.DrawRay(transform.position + vertices[i], normals[i], Color.black);
+            Debug.DrawRay(transform.TransformPoint(vertices[i]), transform.TransformDirection(normals[i]), Color.black);
         }
     }
 
@@ -182,23 +221,55 @@ public class ProceduralMushroom : MonoBehaviour
             capHeight,
             capOverhang,
             capShape,
+            
             rotationPerHeightUnitEuler.x,
             rotationPerHeightUnitEuler.y,
-            rotationPerHeightUnitEuler.z
+            rotationPerHeightUnitEuler.z,
+            
+            textureGenerator.colorA.r,
+            textureGenerator.colorA.g,
+            textureGenerator.colorA.b,
+            
+            textureGenerator.colorB.r,
+            textureGenerator.colorB.g,
+            textureGenerator.colorB.b,
+            
+            textureGenerator.scale.x,
+            textureGenerator.scale.y,
+            
+            textureGenerator.offset.x,
+            textureGenerator.offset.y
         };
     }
 
     public void SetGenes(float[] genes)
     {
-        Assert.AreEqual(8, genes.Length);
+        Assert.AreEqual(18, genes.Length);
         
         stemHeight   = genes[0];
         stemRadius   = genes[1];
         capHeight    = genes[2];
         capOverhang  = genes[3];
         capShape     = genes[4];
+        
         rotationPerHeightUnitEuler.x = genes[5];
         rotationPerHeightUnitEuler.y = genes[6];
         rotationPerHeightUnitEuler.z = genes[7];
+        
+        textureGenerator.colorA.r = genes[8];
+        textureGenerator.colorA.g = genes[9];
+        textureGenerator.colorA.b = genes[10];
+        
+        textureGenerator.colorB.r = genes[11];
+        textureGenerator.colorB.g = genes[12];
+        textureGenerator.colorB.b = genes[13];
+        
+        textureGenerator.scale.x = genes[14];
+        textureGenerator.scale.y = genes[15];
+        
+        textureGenerator.offset.x = genes[16];
+        textureGenerator.offset.y = genes[17];
+
+        isDirty = true;
     }
 }

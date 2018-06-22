@@ -12,6 +12,7 @@ public class MushroomField : MonoBehaviour
 {
     [SerializeField] float mutationRate = 0.05f;
     [SerializeField] float spawnInterval = 1f;
+    [SerializeField] bool automaticSelection;
 
     private RandomSpawner spawner;
     private readonly List<ProceduralMushroom> mushrooms = new List<ProceduralMushroom>();
@@ -37,12 +38,10 @@ public class MushroomField : MonoBehaviour
             yield return new WaitForSeconds(spawnInterval);
 
             MakeMushroom();
-            
-            mushrooms.RemoveAll(m => !m);
-            if (mushrooms.Count > 2)
+
+            if (automaticSelection)
             {
-                var mushroom = mushrooms.Aggregate((currentMin, m) => (currentMin == null || (m != null && m.GetGenes()[0] < currentMin.GetGenes()[0])) ? m : currentMin);
-                Destroy(mushroom.gameObject);
+                AutomaticSelection();
             }
         }
     }
@@ -63,6 +62,17 @@ public class MushroomField : MonoBehaviour
         return mushroom;
     }
 
+    private void AutomaticSelection()
+    {
+        mushrooms.RemoveAll(m => !m);
+        if (mushrooms.Count <= 2) return;
+
+        Func<ProceduralMushroom, float> fitnessFunction = m => m.GetGenes()[0];
+        
+        var mushroom = mushrooms.ArgMin(fitnessFunction);
+        Destroy(mushroom.gameObject);
+    }
+    
     private void SetParameters(ProceduralMushroom mushroom, bool useGenetic = true)
     {
         mushrooms.RemoveAll(m => !m);
@@ -120,7 +130,7 @@ public class MushroomField : MonoBehaviour
         {
             if (Random.value < mutationRate)
             {
-                genes[i] *= Random.Range(0.9f, 1.1f);
+                genes[i] *= Random.Range(0.5f, 1.5f);
             }
         }
     }

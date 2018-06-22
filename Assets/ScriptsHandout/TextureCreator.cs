@@ -54,7 +54,7 @@ namespace Handout {
 					switch (patternType) {
 					case PatternType.Noise:
 						// TODO Make tileable perlin noise. Maybe sample along two perpendicular circles in 4D
-						float lightness = SimplexNoise.SeamlessNoise(u, v, HorizontalMultiplier, VerticalMultiplier, HorizontalOffset + VerticalOffset);
+						float lightness = SimplexNoise.SeamlessNoise(u, v, HorizontalMultiplier, VerticalMultiplier, HorizontalOffset, VerticalOffset);
 						// black / white:
 						//cols [index] = lightness * Color.white;
 						// linear interpolation between two given colors:

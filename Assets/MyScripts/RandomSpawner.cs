@@ -8,12 +8,14 @@ using UnityEditor;
 [ExecuteInEditMode]
 public class RandomSpawner : MonoBehaviour
 {
+    private const float RaycastMaxDistance = 200f;
+    
     [SerializeField] GameObject prefab;
-    [SerializeField] [Range(1, 50)] int numToSpawn = 5;
     [SerializeField] float maxHeight = 100f;
     [SerializeField] [Range(0f, 1000f)] float range = 100f;
     [SerializeField] float cellSize = 30f;
     [SerializeField] Vector3 offset = Vector3.zero;
+    [SerializeField] LayerMask terrainCheckLayerMask = Physics.DefaultRaycastLayers;
 
     private int numCellsSide;
     private int numCells;
@@ -39,20 +41,6 @@ public class RandomSpawner : MonoBehaviour
         numCells = numCellsSide * numCellsSide;
         
         freeCellIndices = Enumerable.Range(0, numCells).ToList();
-    }
-    
-    public void Regenerate()
-    {
-        Reset();
-       
-        int numLeftToSpawn = numToSpawn;
-        while (numLeftToSpawn > 0)
-        {
-            GameObject go = Make();
-            if (go == null) break;
-            
-            --numLeftToSpawn;
-        }
     }
 
     public GameObject Make()
@@ -112,7 +100,10 @@ public class RandomSpawner : MonoBehaviour
     private GameObject Generate(int cellIndex, Vector3 position)
     {
         RaycastHit hit;
-        if (!Physics.Raycast(position, Vector3.down, out hit)) return null;
+        if (!Physics.Raycast(position, Vector3.down, out hit, RaycastMaxDistance, terrainCheckLayerMask))
+        {
+            return null;
+        }
 
         var rotation = Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.up);
         var go = Instantiate(prefab, hit.point + offset, rotation, transform);
@@ -120,19 +111,5 @@ public class RandomSpawner : MonoBehaviour
         go.AddComponent<GridCell>().Initialize(this, cellIndex);
         
         return go;
-    }
-}
-
-[CustomEditor(typeof(RandomSpawner))]
-public class BuildingsGeneratorEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
-        
-        var atlas = (RandomSpawner)target;
-        
-        if (GUILayout.Button("Clear")) atlas.Clear();
-        if (GUILayout.Button("Regenerate")) atlas.Regenerate();
     }
 }
