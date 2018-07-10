@@ -41,7 +41,7 @@ public class ProceduralMushroom : MonoBehaviour
     private bool wasChangedInInspector;
     private bool didStart;
 
-    private CancellationTokenSource cancellationTokenSource;
+    private CancellationTokenSource asyncUpdateCancellationTokenSource;
 
     void Start()
     {
@@ -58,7 +58,7 @@ public class ProceduralMushroom : MonoBehaviour
         wasChangedInInspector = didStart;
 
         //Debug.Log("Cancelling " + cancellationTokenSource);
-        cancellationTokenSource?.Cancel();
+        asyncUpdateCancellationTokenSource?.Cancel();
     }
 
     void Update()
@@ -86,7 +86,7 @@ public class ProceduralMushroom : MonoBehaviour
 
     void OnDestroy()
     {
-        cancellationTokenSource?.Cancel();
+        asyncUpdateCancellationTokenSource?.Cancel();
     }
     
     public void Randomize()
@@ -130,18 +130,18 @@ public class ProceduralMushroom : MonoBehaviour
 
     private async void UpdateMeshAndTextureAsync()
     {
-        cancellationTokenSource = new CancellationTokenSource();
+        asyncUpdateCancellationTokenSource = new CancellationTokenSource();
 
         try
         {
             var lathe = new LatheMeshBuilder(numSplines);
 
-            Task meshTask = Task.Run(() => BuildMushroomModel(lathe), cancellationTokenSource.Token);
-            Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(cancellationTokenSource.Token);
+            Task meshTask = Task.Run(() => BuildMushroomModel(lathe), asyncUpdateCancellationTokenSource.Token);
+            Task<Texture2D> textureTask = textureGenerator.GenerateTextureAsync(asyncUpdateCancellationTokenSource.Token);
 
             await Task.WhenAll(meshTask, textureTask);
 
-            cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            asyncUpdateCancellationTokenSource.Token.ThrowIfCancellationRequested();
             
             Mesh mesh = lathe.CreateMesh();
             meshFilter.sharedMesh = mesh;
@@ -154,7 +154,7 @@ public class ProceduralMushroom : MonoBehaviour
             //Debug.Log(ex);
         }
 
-        cancellationTokenSource = null;
+        asyncUpdateCancellationTokenSource = null;
     }
 
     private void BuildMushroomModel(LatheMeshBuilder lathe)

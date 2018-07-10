@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,7 +42,7 @@ public class MushroomField : MonoBehaviour
 
             if (automaticSelection)
             {
-                AutomaticSelection();
+                DestroyLeastFitMushroom();
             }
         }
     }
@@ -62,12 +63,17 @@ public class MushroomField : MonoBehaviour
         return mushroom;
     }
 
-    private void AutomaticSelection()
+    private void DestroyLeastFitMushroom()
     {
         mushrooms.RemoveAll(m => !m);
         if (mushrooms.Count <= 2) return;
 
-        Func<ProceduralMushroom, float> fitnessFunction = m => m.GetGenes()[0];
+        Func<ProceduralMushroom, float> fitnessFunction = m =>
+        {
+            float[] genes = m.GetGenes();
+
+            return -(Mathf.Abs(genes[5]) + Mathf.Abs(genes[6]) + Mathf.Abs(genes[7]));
+        };
         
         var mushroom = mushrooms.ArgMin(fitnessFunction);
         Destroy(mushroom.gameObject);
@@ -83,10 +89,15 @@ public class MushroomField : MonoBehaviour
             return;
         }
 
-        // TODO Avoid possible duplicates
-        ProceduralMushroom parentA = mushrooms[Random.Range(0, mushrooms.Count)];
-        ProceduralMushroom parentB = mushrooms[Random.Range(0, mushrooms.Count)];
+        List<ProceduralMushroom> candidates = mushrooms.ToList();
 
+        int parentAIndex = Random.Range(0, candidates.Count);
+        ProceduralMushroom parentA = candidates[parentAIndex];
+        candidates.RemoveAt(parentAIndex);
+
+        int parentBIndex = Random.Range(0, candidates.Count);
+        ProceduralMushroom parentB = candidates[parentBIndex];
+        
         float[] genes = Crossover(
             parentA.GetGenes(),
             parentB.GetGenes()
@@ -107,7 +118,9 @@ public class MushroomField : MonoBehaviour
         GameObject collidee = hit.collider.gameObject;
         var mushroom = collidee.GetComponent<ProceduralMushroom>();
         if (mushroom == null) return;
-        
+
+        mushrooms.Remove(mushroom);
+       
         Destroy(collidee);
     }
 
